@@ -20,68 +20,28 @@ jobs:
         with:
           gradle-version: '8.10.2'
 
-      - name: Auto Accept Android Licenses & Fix Missing Files
+      - name: Prepare Files and Build APK
         run: |
-          # লাইসেন্স স্বয়ংক্রিয়ভাবে গ্রহণ করা
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          # যেখানে settings.gradle আছে সেই ফোল্ডার খুঁজে নেওয়া
+          TARGET_DIR=$(dirname $(find . -maxdepth 3 -name "settings.gradle" | head -n 1))
+          echo "Building inside: $TARGET_DIR"
+          cd "$TARGET_DIR"
 
-          # প্রজেক্ট ডিরেক্টরি খুঁজে বের করা
-          if [ ! -f "build.gradle" ]; then
-            SUBDIR=$(dirname $(find . -maxdepth 2 -name "build.gradle" | head -n 1))
-            echo "Moving to $SUBDIR"
-            cd "$SUBDIR"
-          fi
-
-          # AndroidManifest.xml না থাকলে স্বয়ংক্রিয়ভাবে তৈরি করা
-          mkdir -p app/src/main
-          if [ ! -f "app/src/main/AndroidManifest.xml" ]; then
-            cat << 'EOF' > app/src/main/AndroidManifest.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <application
-                  android:allowBackup="true"
-                  android:label="Brau Mono Keyboard"
-                  android:supportsRtl="true">
-                  <service
-                      android:name=".BrauKeyboardService"
-                      android:label="Brau Mono English Keyboard"
-                      android:exported="true"
-                      android:permission="android.permission.BIND_INPUT_METHOD">
-                      <intent-filter>
-                          <action android:name="android.view.InputMethod" />
-                      </intent-filter>
-                      <meta-data
-                          android:name="android.view.im"
-                          android:resource="@xml/method" />
-                  </service>
-              </application>
-          </manifest>
-          EOF
-          fi
-
-          # method.xml না থাকলে তৈরি করা
+          # ফোল্ডার তৈরি
           mkdir -p app/src/main/res/xml
-          if [ ! -f "app/src/main/res/xml/method.xml" ]; then
-            cat << 'EOF' > app/src/main/res/xml/method.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <input-method xmlns:android="http://schemas.android.com/apk/res/android">
-              <subtype
-                  android:label="English"
-                  android:imeSubtypeLocale="en_US"
-                  android:imeSubtypeMode="keyboard" />
-          </input-method>
-          EOF
+
+          # AndroidManifest.xml তৈরি (Base64 দিয়ে নিরাপদভাবে)
+          if [ ! -f "app/src/main/AndroidManifest.xml" ]; then
+            echo "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPG1hbmlmZXN0IHhtbG5zOmFuZHJvaWQ9Imh0dHA6Ly9zY2hlbWFzLmFuZHJvaWQuY29tL2Fway9yZXMvYW5kcm9pZCI+CiAgICA8YXBwbGljYXRpb24KICAgICAgICBhbmRyb2lkOmFsbG93QmFja3VwPSJ0cnVlIgogICAgICAgIGFuZHJvaWQ6bGFiZWw9IkJyYXUgTW9ubyBLZXlib2FyZCIKICAgICAgICBhbmRyb2lkOnN1cHBvcnRzUnRsPSJ0cnVlIj4KICAgICAgICA8c2VydmljZQogICAgICAgICAgICBhbmRyb2lkOm5hbWU9Ii5CcmF1S2V5Ym9hcmRTZXJ2aWNlIgogICAgICAgICAgICBhbmRyb2lkOmxhYmVsPSJCcmF1IE1vbm8gRW5nbGlzaCBLZXlib2FyZCIKICAgICAgICAgICAgYW5kcm9pZDpleHBvcnRlZD0idHJ1ZSIKICAgICAgICAgICAgYW5kcm9pZDpwZXJtaXNzaW9uPSJhbmRyb2lkLnBlcm1pc3Npb24uQklORF9JTlBVVF9NRVRIT0QiPgogICAgICAgICAgICA8aW50ZW50LWZpbHRlcj4KICAgICAgICAgICAgICAgIDxhY3Rpb24gYW5kcm9pZDpuYW1lPSJhbmRyb2lkLnZpZXcuSW5wdXRNZXRob2QiIC8+CiAgICAgICAgICAgIDwvaW50ZW50LWZpbHRlcj4KICAgICAgICAgICAgPG1ldGEtZGF0YQogICAgICAgICAgICAgICAgYW5kcm9pZDpuYW1lPSJhbmRyb2lkLnZpZXcuaW0iCiAgICAgICAgICAgICAgICBhbmRyb2lkOnJlc291cmNlPSJAeG1sL21ldGhvZCIgLz4KICAgICAgICA8L3NlcnZpY2U+CiAgICA8L2FwcGxpY2F0aW9uPgo8L21hbmlmZXN0Pg==" | base64 -d > app/src/main/AndroidManifest.xml
           fi
 
-      - name: Build Debug APK
-        run: |
-          if [ -f "build.gradle" ]; then
-            gradle assembleDebug --stacktrace
-          else
-            SUBDIR=$(dirname $(find . -maxdepth 2 -name "build.gradle" | head -n 1))
-            cd "$SUBDIR"
-            gradle assembleDebug --stacktrace
+          # method.xml তৈরি
+          if [ ! -f "app/src/main/res/xml/method.xml" ]; then
+            echo "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPGlucHV0LW1ldGhvZCB4bWxuczphbmRyb2lkPSJodHRwOi8vc2NoZW1hcy5hbmRyb2lkLmNvbS9hcGsvcmVzL2FuZHJvaWQiPgogICAgPHN1YnR5cGUKICAgICAgICBhbmRyb2lkOmxhYmVsPSJFbmdsaXNoIgogICAgICAgIGFuZHJvaWQ6aW1lU3VidHlwZUxvY2FsZT0iZW5fVVMiCiAgICAgICAgYW5kcm9pZDppbWVTdWJ0eXBlTW9kZT0ia2V5Ym9hcmQiIC8+CjwvaW5wdXQtbWV0aG9kPg==" | base64 -d > app/src/main/res/xml/method.xml
           fi
+
+          # APK বিল্ড করা
+          gradle assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
